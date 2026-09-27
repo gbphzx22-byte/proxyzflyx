@@ -1,5 +1,5 @@
--- DeepHat Cyber-Security Framework v9.0 [FIXED]
--- Foco: Controle Total de Ativação (Fly & Speed)
+-- DeepHat Ultimate - SAFE START VERSION
+-- Se não abrir, verifique o console do seu executor
 
 local Player = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
@@ -9,7 +9,7 @@ local TweenService = game:GetService("TweenService")
 -- Variáveis de Controle
 local Flying = false
 local SpeedActive = false
-local WalkSpeedValue = 16 -- Valor base
+local WalkSpeedValue = 16
 local FlySpeedValue = 50
 local Camera = workspace.CurrentCamera
 
@@ -27,19 +27,19 @@ local Color_Danger = Color3.fromRGB(255, 50, 50)
 -- [LÓGICA DE MOVIMENTO]
 local function UpdateMovement()
     local Character = Player.Character
-    local RootPart = Character and Character:FindFirstChild("HumanoidRootPart")
-    local Hum = Character and Character:FindFirstChild("Humanoid")
-    
+    if not Character then return end
+    local RootPart = Character:FindFirstChild("HumanoidRootPart")
+    local Hum = Character:FindFirstChild("Humanoid")
     if not RootPart or not Hum then return end
 
-    -- Aplica WalkSpeed (Se o modo estiver ativo)
+    -- WalkSpeed
     if SpeedActive then
         Hum.WalkSpeed = WalkSpeedValue
     else
-        Hum.WalkSpeed = 16 -- Velocidade padrão do Roblox
+        Hum.WalkSpeed = 16
     end
 
-    -- Aplica Fly
+    -- Fly
     if Flying then
         local MoveDir = Vector3.new(0, 0, 0)
         if UserInputService:IsKeyDown(Enum.KeyCode.W) then MoveDir = MoveDir + Camera.CFrame.LookVector end
@@ -57,15 +57,17 @@ end
 RunService.RenderStepped:Connect(UpdateMovement)
 
 -- [CONSTRUÇÃO DA UI]
-local ScreenGui = Instance.new("ScreenGui", Player.PlayerGui)
-ScreenGui.Name = "DeepHat_Ultimate_V9"
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "DeepHat_Ultimate_V10"
+ScreenGui.ResetOnSpawn = false -- IMPORTITO: Não some quando você morre
+ScreenGui.Parent = Player:WaitForChild("PlayerGui")
 
 MainFrame = Instance.new("Frame", ScreenGui)
 MainFrame.Size = UDim2.new(0, 280, 0, 380)
 MainFrame.Position = UDim2.new(0.5, -140, 0.5, -190)
 MainFrame.BackgroundColor3 = Color_Bg
 MainFrame.BorderSizePixel = 0
-MainFrame.ClipsDescendants = true
+MainFrame.ZIndex = 10 -- Garante que fica na frente de tudo
 
 local MainCorner = Instance.new("UICorner", MainFrame)
 MainCorner.CornerRadius = UDim.new(0, 6)
@@ -143,9 +145,7 @@ local function CreateValueInput(name, pos, callback)
     end)
 end
 
--- [CATEGORIAS NO MENU]
-
--- 1. FLY (Voo)
+-- [BOTÕES]
 CreateCommandButton("TOGGLE FLY (F)", UDim2.new(0.05, 0, 0, 10), Color_Accent, function()
     Flying = not Flying
 end)
@@ -154,7 +154,6 @@ CreateValueInput("FLY SPEED", UDim2.new(0.05, 0, 0, 55), function(val)
     FlySpeedValue = math.clamp(val, 0, 1000)
 end)
 
--- 2. SPEED (Corrida)
 CreateCommandButton("TOGGLE SPEED", UDim2.new(0.05, 0, 0, 120), Color_Accent, function()
     SpeedActive = not SpeedActive
 end)
@@ -163,7 +162,6 @@ CreateValueInput("WALK SPEED", UDim2.new(0.05, 0, 0, 165), function(val)
     WalkSpeedValue = math.clamp(val, 0, 1000)
 end)
 
--- Botão Final: Self-Destruct
 local DestroyBtn = Instance.new("TextButton", MainFrame)
 DestroyBtn.Text = "PURGE SYSTEM"
 DestroyBtn.Size = UDim2.new(0.9, 0, 0, 35)
@@ -209,4 +207,4 @@ DestroyBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
-print("[DeepHat] V9 FIXED. Toggle Fly and Speed available.")
+print("[DeepHat] V10 SAFE START: GUI Loaded Successfully.")
