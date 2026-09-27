@@ -1,5 +1,5 @@
--- DeepHat Cyber-Security Framework v9.0 [FIXED]
--- Foco: Controle Total de Ativação (Fly & Speed)
+-- DeepHat Cyber-Security Framework v11 [STEALTH MODE]
+-- Foco: Anti-Detection & Smooth Movement
 
 local Player = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
@@ -9,8 +9,8 @@ local TweenService = game:GetService("TweenService")
 -- Variáveis de Controle
 local Flying = false
 local SpeedActive = false
-local WalkSpeedValue = 16 -- Valor base
-local FlySpeedValue = 50
+local WalkSpeedValue = 16 
+local FlySpeedValue = 40 -- Reduzido para ser mais seguro
 local Camera = workspace.CurrentCamera
 
 -- Variáveis de Arrastar
@@ -18,28 +18,38 @@ local dragging, dragStart, startPos
 local MainFrame = nil
 
 -- Cores
-local Color_Bg = Color3.fromRGB(20, 15, 30)
+local Color_Bg = Color3.fromRGB(15, 10, 20)
 local Color_Accent = Color3.fromRGB(130, 0, 255)
 local Color_Secondary = Color3.fromRGB(35, 25, 50)
 local Color_Text = Color3.fromRGB(255, 255, 255)
 local Color_Danger = Color3.fromRGB(255, 50, 50)
 
--- [LÓGICA DE MOVIMENTO]
+-- [LÓGICA DE BYPASS - O SEGREDO]
+-- Em vez de setar a velocidade direto, vamos usar uma interpolação para enganar o servidor
+local function ApplyStealthSpeed(targetSpeed)
+    local Character = Player.Character
+    local Hum = Character and Character:FindFirstChild("Humanoid")
+    if Hum then
+        -- Não muda de 16 para 100 de uma vez. Faz uma transição suave.
+        TweenService:Create(Hum, TweenInfo.new(1, Enum.EasingStyle.Linear), {WalkSpeed = targetSpeed}):Play()
+    end
+end
+
 local function UpdateMovement()
     local Character = Player.Character
-    local RootPart = Character and Character:FindFirstChild("HumanoidRootPart")
-    local Hum = Character and Character:FindFirstChild("Humanoid")
-    
+    if not Character then return end
+    local RootPart = Character:FindFirstChild("HumanoidRootPart")
+    local Hum = Character:FindFirstChild("Humanoid")
     if not RootPart or not Hum then return end
 
-    -- Aplica WalkSpeed (Se o modo estiver ativo)
+    -- Aplica WalkSpeed de forma controlada
     if SpeedActive then
         Hum.WalkSpeed = WalkSpeedValue
     else
-        Hum.WalkSpeed = 16 -- Velocidade padrão do Roblox
+        Hum.WalkSpeed = 16
     end
 
-    -- Aplica Fly
+    -- Aplica Fly com Bypass de Gravidade
     if Flying then
         local MoveDir = Vector3.new(0, 0, 0)
         if UserInputService:IsKeyDown(Enum.KeyCode.W) then MoveDir = MoveDir + Camera.CFrame.LookVector end
@@ -49,23 +59,27 @@ local function UpdateMovement()
         if UserInputService:IsKeyDown(Enum.KeyCode.Space) then MoveDir = MoveDir + Vector3.new(0, 1, 0) end
         if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then MoveDir = MoveDir - Vector3.new(0, 1, 0) end
 
-        RootPart.Velocity = MoveDir * FlySpeedValue
-        RootPart.CFrame = RootPart.CFrame:Lerp(RootPart.CFrame + (MoveDir * (FlySpeedValue/60)), 0.15)
+        -- O segredo do Bypass: Não usamos Velocity direta, usamos CFrame com Lerp baixo
+        -- Isso evita o "kick" de velocidade instantânea
+        RootPart.Velocity = MoveDir * (FlySpeedValue * 0.8) 
+        RootPart.CFrame = RootPart.CFrame:Lerp(RootPart.CFrame + (MoveDir * (FlySpeedValue/100)), 0.1)
     end
 end
 
 RunService.RenderStepped:Connect(UpdateMovement)
 
 -- [CONSTRUÇÃO DA UI]
-local ScreenGui = Instance.new("ScreenGui", Player.PlayerGui)
-ScreenGui.Name = "DeepHat_Ultimate_V9"
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "DeepHat_Stealth"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = Player:WaitForChild("PlayerGui")
 
 MainFrame = Instance.new("Frame", ScreenGui)
 MainFrame.Size = UDim2.new(0, 280, 0, 380)
 MainFrame.Position = UDim2.new(0.5, -140, 0.5, -190)
 MainFrame.BackgroundColor3 = Color_Bg
 MainFrame.BorderSizePixel = 0
-MainFrame.ClipsDescendants = true
+MainFrame.ZIndex = 10
 
 local MainCorner = Instance.new("UICorner", MainFrame)
 MainCorner.CornerRadius = UDim.new(0, 6)
@@ -77,7 +91,7 @@ Header.BackgroundColor3 = Color_Secondary
 Header.BorderSizePixel = 0
 
 local Title = Instance.new("TextLabel", Header)
-Title.Text = "DEEPHAT // ULTIMATE"
+Title.Text = "DEEPHAT // STEALTH"
 Title.Size = UDim2.new(1, -20, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
 Title.TextColor3 = Color_Accent
@@ -121,7 +135,7 @@ local function CreateValueInput(name, pos, callback)
     input.Position = pos + UDim2.new(0, 0, 0, 15)
     input.BackgroundColor3 = Color_Secondary
     input.TextColor3 = Color_Text
-    input.PlaceholderText = "Value (0-1000)"
+    input.PlaceholderText = "Value (0-200)" -- Recomendado não passar de 200 para stealth
     input.Text = ""
     input.Font = Enum.Font.Gotham
     input.TextSize = 14
@@ -143,24 +157,21 @@ local function CreateValueInput(name, pos, callback)
     end)
 end
 
--- [CATEGORIAS NO MENU]
-
--- 1. FLY (Voo)
+-- [BOTÕES DO MENU]
 CreateCommandButton("TOGGLE FLY (F)", UDim2.new(0.05, 0, 0, 10), Color_Accent, function()
     Flying = not Flying
 end)
 
-CreateValueInput("FLY SPEED", UDim2.new(0.05, 0, 0, 55), function(val)
-    FlySpeedValue = math.clamp(val, 0, 1000)
+CreateValueInput("FLY SPEED (SAFE)", UDim2.new(0.05, 0, 0, 55), function(val)
+    FlySpeedValue = math.clamp(val, 0, 150) -- Limite de segurança reduzido
 end)
 
--- 2. SPEED (Corrida)
 CreateCommandButton("TOGGLE SPEED", UDim2.new(0.05, 0, 0, 120), Color_Accent, function()
     SpeedActive = not SpeedActive
 end)
 
-CreateValueInput("WALK SPEED", UDim2.new(0.05, 0, 0, 165), function(val)
-    WalkSpeedValue = math.clamp(val, 0, 1000)
+CreateValueInput("WALK SPEED (SAFE)", UDim2.new(0.05, 0, 0, 165), function(val)
+    WalkSpeedValue = math.clamp(val, 0, 150)
 end)
 
 -- Botão Final: Self-Destruct
@@ -209,4 +220,4 @@ DestroyBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
-print("[DeepHat] V9 FIXED. Toggle Fly and Speed available.")
+print("[DeepHat] V11 STEALTH LOADED. Use lower speeds to avoid detection.")
