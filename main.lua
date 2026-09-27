@@ -1,223 +1,201 @@
--- DeepHat Cyber-Security Framework v11 [STEALTH MODE]
--- Foco: Anti-Detection & Smooth Movement
+-- DeepHat Cyber-Security Framework v4.0
+-- Tema: Cyber-Purple | Foco: Draggable UI & Performance
 
 local Player = game.Players.LocalPlayer
+local Mouse = Player:GetMouse()
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 
--- Variáveis de Controle
+-- Configurações de Voo
 local Flying = false
-local SpeedActive = false
-local WalkSpeedValue = 16 
-local FlySpeedValue = 40 -- Reduzido para ser mais seguro
+local CurrentSpeed = 50 
+local FlyKey = Enum.KeyCode.F
 local Camera = workspace.CurrentCamera
 
--- Variáveis de Arrastar
-local dragging, dragStart, startPos
+-- Variáveis de Controle de Arrastar (Drag System)
+local dragging, dragInput, dragStart, startPos
 local MainFrame = nil
 
--- Cores
-local Color_Bg = Color3.fromRGB(15, 10, 20)
-local Color_Accent = Color3.fromRGB(130, 0, 255)
-local Color_Secondary = Color3.fromRGB(35, 25, 50)
-local Color_Text = Color3.fromRGB(255, 255, 255)
-local Color_Danger = Color3.fromRGB(255, 50, 50)
+-- Definição de Presets
+local Presets = {
+    {Name = "Stealth (Safe)", Speed = 50, Risk = "Low", Color = Color3.fromRGB(0, 255, 150)},
+    {Name = "Balanced", Speed = 120, Risk = "Medium", Color = Color3.fromRGB(255, 200, 0)},
+    {Name = "Rage (High Risk)", Speed = 450, Risk = "High", Color = Color3.fromRGB(255, 50, 50)}
+}
 
--- [LÓGICA DE BYPASS - O SEGREDO]
--- Em vez de setar a velocidade direto, vamos usar uma interpolação para enganar o servidor
-local function ApplyStealthSpeed(targetSpeed)
-    local Character = Player.Character
-    local Hum = Character and Character:FindFirstChild("Humanoid")
-    if Hum then
-        -- Não muda de 16 para 100 de uma vez. Faz uma transição suave.
-        TweenService:Create(Hum, TweenInfo.new(1, Enum.EasingStyle.Linear), {WalkSpeed = targetSpeed}):Play()
-    end
+-- Cores do Tema
+local Color_Primary = Color3.fromRGB(130, 0, 255)
+local Color_Secondary = Color3.fromRGB(30, 0, 50)
+local Color_Accent = Color3.fromRGB(200, 100, 255)
+
+-- [SISTEMA DE ARRASTAR - LÓGICA]
+local function Update(input)
+    local delta = input.Position - dragStart
+    MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
 end
 
-local function UpdateMovement()
-    local Character = Player.Character
-    if not Character then return end
-    local RootPart = Character:FindFirstChild("HumanoidRootPart")
-    local Hum = Character:FindFirstChild("Humanoid")
-    if not RootPart or not Hum then return end
-
-    -- Aplica WalkSpeed de forma controlada
-    if SpeedActive then
-        Hum.WalkSpeed = WalkSpeedValue
-    else
-        Hum.WalkSpeed = 16
-    end
-
-    -- Aplica Fly com Bypass de Gravidade
-    if Flying then
-        local MoveDir = Vector3.new(0, 0, 0)
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then MoveDir = MoveDir + Camera.CFrame.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then MoveDir = MoveDir - Camera.CFrame.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then MoveDir = MoveDir - Camera.CFrame.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then MoveDir = MoveDir + Camera.CFrame.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then MoveDir = MoveDir + Vector3.new(0, 1, 0) end
-        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then MoveDir = MoveDir - Vector3.new(0, 1, 0) end
-
-        -- O segredo do Bypass: Não usamos Velocity direta, usamos CFrame com Lerp baixo
-        -- Isso evita o "kick" de velocidade instantânea
-        RootPart.Velocity = MoveDir * (FlySpeedValue * 0.8) 
-        RootPart.CFrame = RootPart.CFrame:Lerp(RootPart.CFrame + (MoveDir * (FlySpeedValue/100)), 0.1)
-    end
-end
-
-RunService.RenderStepped:Connect(UpdateMovement)
-
--- [CONSTRUÇÃO DA UI]
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "DeepHat_Stealth"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = Player:WaitForChild("PlayerGui")
-
-MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 280, 0, 380)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -190)
-MainFrame.BackgroundColor3 = Color_Bg
-MainFrame.BorderSizePixel = 0
-MainFrame.ZIndex = 10
-
-local MainCorner = Instance.new("UICorner", MainFrame)
-MainCorner.CornerRadius = UDim.new(0, 6)
-
--- Header
-local Header = Instance.new("Frame", MainFrame)
-Header.Size = UDim2.new(1, 0, 0, 40)
-Header.BackgroundColor3 = Color_Secondary
-Header.BorderSizePixel = 0
-
-local Title = Instance.new("TextLabel", Header)
-Title.Text = "DEEPHAT // STEALTH"
-Title.Size = UDim2.new(1, -20, 1, 0)
-Title.Position = UDim2.new(0, 15, 0, 0)
-Title.TextColor3 = Color_Accent
-Title.BackgroundTransparency = 1
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 16
-Title.TextXAlignment = Enum.TextXAlignment.Left
-
-local ScrollContainer = Instance.new("Frame", MainFrame)
-ScrollContainer.Size = UDim2.new(1, 0, 1, -130)
-ScrollContainer.Position = UDim2.new(0, 0, 0, 45)
-ScrollContainer.BackgroundTransparency = 1
-
--- Funções de UI
-local function CreateCommandButton(name, pos, color, callback)
-    local btn = Instance.new("TextButton", ScrollContainer)
-    btn.Size = UDim2.new(0.9, 0, 0, 35)
-    btn.Position = pos
-    btn.BackgroundColor3 = color
-    btn.TextColor3 = Color_Text
-    btn.Text = name
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 14
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
-    btn.MouseButton1Click:Connect(callback)
-end
-
-local function CreateValueInput(name, pos, callback)
-    local label = Instance.new("TextLabel", ScrollContainer)
-    label.Text = name
-    label.Size = UDim2.new(0.9, 0, 0, 15)
-    label.Position = pos
-    label.TextColor3 = Color_Accent
-    label.BackgroundTransparency = 1
-    label.Font = Enum.Font.GothamBold
-    label.TextSize = 11
-    label.TextXAlignment = Enum.TextXAlignment.Left
-
-    local input = Instance.new("TextBox", ScrollContainer)
-    input.Size = UDim2.new(0.9, 0, 0, 30)
-    input.Position = pos + UDim2.new(0, 0, 0, 15)
-    input.BackgroundColor3 = Color_Secondary
-    input.TextColor3 = Color_Text
-    input.PlaceholderText = "Value (0-200)" -- Recomendado não passar de 200 para stealth
-    input.Text = ""
-    input.Font = Enum.Font.Gotham
-    input.TextSize = 14
-    Instance.new("UICorner", input).CornerRadius = UDim.new(0, 4)
-
-    local apply = Instance.new("TextButton", ScrollContainer)
-    apply.Size = UDim2.new(0.9, 0, 0, 25)
-    apply.Position = pos + UDim2.new(0, 0, 0, 45)
-    apply.BackgroundColor3 = Color_Secondary
-    apply.TextColor3 = Color_Text
-    apply.Text = "APPLY"
-    apply.Font = Enum.Font.GothamBold
-    apply.TextSize = 12
-    Instance.new("UICorner", apply).CornerRadius = UDim.new(0, 4)
-
-    apply.MouseButton1Click:Connect(function()
-        local val = tonumber(input.Text)
-        if val then callback(val) end
-    end)
-end
-
--- [BOTÕES DO MENU]
-CreateCommandButton("TOGGLE FLY (F)", UDim2.new(0.05, 0, 0, 10), Color_Accent, function()
-    Flying = not Flying
-end)
-
-CreateValueInput("FLY SPEED (SAFE)", UDim2.new(0.05, 0, 0, 55), function(val)
-    FlySpeedValue = math.clamp(val, 0, 150) -- Limite de segurança reduzido
-end)
-
-CreateCommandButton("TOGGLE SPEED", UDim2.new(0.05, 0, 0, 120), Color_Accent, function()
-    SpeedActive = not SpeedActive
-end)
-
-CreateValueInput("WALK SPEED (SAFE)", UDim2.new(0.05, 0, 0, 165), function(val)
-    WalkSpeedValue = math.clamp(val, 0, 150)
-end)
-
--- Botão Final: Self-Destruct
-local DestroyBtn = Instance.new("TextButton", MainFrame)
-DestroyBtn.Text = "PURGE SYSTEM"
-DestroyBtn.Size = UDim2.new(0.9, 0, 0, 35)
-DestroyBtn.Position = UDim2.new(0.05, 0, 1, -40)
-DestroyBtn.BackgroundColor3 = Color_Danger
-DestroyBtn.TextColor3 = Color_Text
-DestroyBtn.Font = Enum.Font.GothamBold
-DestroyBtn.TextSize = 14
-Instance.new("UICorner", DestroyBtn).CornerRadius = UDim.new(0, 4)
-
--- [SISTEMA DE ARRASTAR]
-TitleBar = Header
-TitleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+local function OnInputBegan(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
         dragStart = input.Position
         startPos = MainFrame.Position
-    end
-end)
 
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
     end
-end)
+end
 
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
+local function OnInputChanged(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        if dragging then
+            local delta = input.Position - dragStart
+            MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
     end
-end)
+end
 
--- [EVENTOS FINAIS]
+-- [LÓGICA DE VOO]
+local function StartFly()
+    local Character = Player.Character
+    local RootPart = Character:FindFirstChild("HumanoidRootPart")
+    if not RootPart then return end
+
+    local Connection = RunService.RenderStepped:Connect(function()
+        if Flying and Character and RootPart then
+            local MoveDir = Vector3.new(0, 0, 0)
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then MoveDir = MoveDir + Camera.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then MoveDir = MoveDir - Camera.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then MoveDir = MoveDir - Camera.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then MoveDir = MoveDir + Camera.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then MoveDir = MoveDir + Vector3.new(0, 1, 0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then MoveDir = MoveDir - Vector3.new(0, 1, 0) end
+
+            RootPart.Velocity = MoveDir * CurrentSpeed
+            RootPart.CFrame = RootPart.CFrame:Lerp(RootPart.CFrame + (MoveDir * (CurrentSpeed/60)), 0.15)
+        end
+    end)
+end
+
+-- [CONSTRUÇÃO DA UI]
+local ScreenGui = Instance.new("ScreenGui", Player.PlayerGui)
+ScreenGui.Name = "DeepHat_GUI"
+
+MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 250, 0, 300)
+MainFrame.Position = UDim2.new(0.5, -125, 0.5, -150)
+MainFrame.BackgroundColor3 = Color_Secondary
+MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
+
+local UICorner = Instance.new("UICorner", MainFrame)
+UICorner.CornerRadius = UDim.new(0, 12)
+
+-- Barra de Título (Área de Arrastar)
+local TitleBar = Instance.new("Frame", MainFrame)
+TitleBar.Size = UDim2.new(1, 0, 0, 40)
+TitleBar.BackgroundColor3 = Color3.fromRGB(20, 0, 40)
+TitleBar.BorderSizePixel = 0
+Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 12)
+
+local Title = Instance.new("TextLabel", TitleBar)
+Title.Text = "DEEPHAT FLY [PRO]"
+Title.Size = UDim2.new(1, 0, 1, 0)
+Title.TextColor3 = Color_Accent
+Title.BackgroundTransparency = 1
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 18
+
+-- Status e Botões (Mantendo a estrutura anterior)
+local StatusFrame = Instance.new("Frame", MainFrame)
+StatusFrame.Size = UDim2.new(0.9, 0, 0, 50)
+StatusFrame.Position = UDim2.new(0.05, 0, 0, 50)
+StatusFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Instance.new("UICorner", StatusFrame).CornerRadius = UDim.new(0, 8)
+
+local StatusText = Instance.new("TextLabel", StatusFrame)
+StatusText.Text = "MODE: STEALTH\nSPEED: 50\nRISK: LOW"
+StatusText.Size = UDim2.new(1, 0, 1, 0)
+StatusText.TextColor3 = Color3.fromRGB(255, 255, 255)
+StatusText.BackgroundTransparency = 1
+StatusText.Font = Enum.Font.GothamSemibold
+StatusText.TextSize = 12
+
+-- Botões de Preset
+local function CreatePresetBtn(name, index)
+    local btn = Instance.new("TextButton", MainFrame)
+    btn.Size = UDim2.new(0.8, 0, 0, 30)
+    btn.Position = UDim2.new(0.1, 0, 0, 105 + (index-1)*35)
+    btn.BackgroundColor3 = Color_Primary
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Text = name
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+
+    btn.MouseButton1Click:Connect(function()
+        CurrentSpeed = Presets[index].Speed
+        StatusText.Text = "MODE: " .. Presets[index].Name:upper() .. "\nSPEED: " .. CurrentSpeed .. "\nRISK: " .. Presets[index].Risk:upper()
+        StatusText.TextColor3 = Presets[index].Color
+    end)
+end
+
+CreatePresetBtn("STEALTH (Safe)", 1)
+CreatePresetBtn("BALANCED (Med)", 2)
+CreatePresetBtn("RAGE (High)", 3)
+
+-- Botão de Toggle e Self-Destruct
+local ToggleBtn = Instance.new("TextButton", MainFrame)
+ToggleBtn.Text = "TOGGLE FLY (F)"
+ToggleBtn.Size = UDim2.new(0.8, 0, 0, 35)
+ToggleBtn.Position = UDim2.new(0.1, 0, 0, 220)
+ToggleBtn.BackgroundColor3 = Color_Primary
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.Font = Enum.Font.GothamBold
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 6)
+
+local DestroyBtn = Instance.new("TextButton", MainFrame)
+DestroyBtn.Text = "SELF-DESTRUCT"
+DestroyBtn.Size = UDim2.new(0.8, 0, 0, 25)
+DestroyBtn.Position = UDim2.new(0.1, 0, 0, 265)
+DestroyBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+DestroyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+DestroyBtn.Font = Enum.Font.GothamBold
+Instance.new("UICorner", DestroyBtn).CornerRadius = UDim.new(0, 6)
+
+-- [EVENTOS]
+-- Conectar o Drag à TitleBar (Para arrastar pela barra de título)
+TitleBar.InputBegan:Connect(OnInputBegan)
+UserInputService.InputChanged:Connect(OnInputChanged)
+
+-- Toggle Fly
+local function ToggleFly()
+    Flying = not Flying
+    if Flying then
+        StartFly()
+    else
+        -- Parar voo
+        local char = Player.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            char.HumanoidRootPart.Velocity = Vector3.new(0, 0, 0)
+        end
+    end
+end
+
 UserInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
-    if input.KeyCode == Enum.KeyCode.F then
-        Flying = not Flying
+    if input.KeyCode == FlyKey then
+        ToggleFly()
     end
 end)
 
+ToggleBtn.MouseButton1Click:Connect(ToggleFly)
 DestroyBtn.MouseButton1Click:Connect(function()
+    -- Lógica de destruição rápida
     ScreenGui:Destroy()
 end)
 
-print("[DeepHat] V11 STEALTH LOADED. Use lower speeds to avoid detection.")
+print("[DeepHat] V4 Loaded. Drag the TitleBar to move the menu.")
